@@ -306,21 +306,324 @@ static void free_register(Register *records)
     *records = (Register){0};
 }
 
+static void search_students(Register *records)
+{
+    int choice;
+    if (!ask_number("1. ID  2. First or last name  3. Programme: ", 1, 3, &choice))
+        return;
+    if (choice == 1) {
+        Student *student = select_student(records);
+        if (student)
+            show_student(student);
+        return;
+    }
+    char query[TEXT_SIZE];
+    if (!ask_text("Search text: ", query))
+        return;
+    int found = 0;
+    for (size_t i = 0; i < records->count; i++) {
+        Student *student = &records->students[i];
+        int match;
+        if (choice == 2)
+            match = strstr(student->first, query) || strstr(student->last, query);
+        else
+            match = strstr(student->programme, query) != NULL;
+        if (match) {
+            show_student(student);
+            found = 1;
+        }
+    }
+    if (!found)
+        puts("No matching students.");
+}
+
+static int comes_before(const Student *a, const Student *b, int order)
+{
+    switch (order) {
+    case 1: return a->id < b->id;
+    case 2: {
+        int last = strcmp(a->last, b->last);
+        return last < 0 || (last == 0 && strcmp(a->first, b->first) < 0);
+    }
+    case 3:
+        if (!a->course_count || !b->course_count)
+            return a->course_count && !b->course_count;
+        return student_average(a) > student_average(b);
+    default: return strcmp(a->programme, b->programme) < 0;
+    }
+}
+
+static void sort_students(Register *records)
+{
+    int order;
+    if (!ask_number("1. ID  2. Name  3. Average  4. Programme: ", 1, 4, &order))
+        return;
+    for (size_t i = 0; i < records->count; i++) {
+        size_t best = i;
+        for (size_t j = i + 1; j < records->count; j++) {
+            if (comes_before(&records->students[j], &records->students[best], order))
+                best = j;
+        }
+        Student saved = records->students[i];
+        records->students[i] = records->students[best];
+        records->students[best] = saved;
+    }
+    list_students(records);
+}
+
+static int passes_all_courses(const Student *student)
+{
+    for (size_t i = 0; i < student->course_count; i++) {
+        if (course_grade(&student->courses[i]) < 50)
+            return 0;
+    }
+    return 1;
+}
+
+static void report_programmes(const Register *records)
+{
+    puts("\nStudents per programme");
+    for (size_t i = 0; i < records->count; i++) {
+        const char *programme = records->students[i].programme;
+        size_t first = 0, count = 0;
+        for (size_t j = 0; j < records->count; j++) {
+            if (strcmp(records->students[j].programme, programme) == 0) {
+                if (count == 0)
+                    first = j;
+                count++;
+            }
+        }
+        if (first == i)
+            printf("%s: %zu\n", programme, count);
+    }
+}
+
+static void report_courses(Register *records)
+{
+    puts("\nAverage by course code");
+    for (size_t i = 0; i < records->count; i++) {
+        Student *student = &records->students[i];
+        for (size_t j = 0; j < student->course_count; j++) {
+            const char *code = student->courses[j].code;
+            size_t first = 0, count = 0;
+            double sum = 0;
+            for (size_t k = 0; k < records->count; k++) {
+                Course *course = find_course(&records->students[k], code);
+                if (course) {
+                    if (count == 0)
+                        first = k;
+                    count++;
+                    sum += course_grade(course);
+                }
+            }
+            if (first == i)
+                printf("%s: %.1f%% (%zu records)\n", code, sum / count, count);
+        }
+    }
+}
+
+static void academic_report(Register *records)
+{
+    size_t courses = 0, graded = 0, passed = 0;
+    const Student *highest = NULL, *lowest = NULL;
+    double total = 0, high = 0, low = 0;
+    for (size_t i = 0; i < records->count; i++) {
+        const Student *student = &records->students[i];
+        courses += student->course_count;
+        if (!student->course_count)
+            continue;
+        double average = student_average(student);
+        total += average;
+        if (!highest || average > high) {
+            highest = student;
+            high = average;
+        }
+        if (!lowest || average < low) {
+            lowest = student;
+            low = average;
+        }
+        graded++;
+        passed += passes_all_courses(student);
+    }
+    printf("\nAcademic report\nStudents: %zu\nCourse registrations: %zu\n",
+           records->count, courses);
+    printf("Passing: %zu\nFailing: %zu\nNo courses: %zu\n",
+           passed, graded - passed, records->count - graded);
+    if (graded) {
+        printf("Overall average: %.1f%%\n", total / graded);
+        printf("Highest: %s %s (ID %d), %.1f%%\n",
+               highest->first, highest->last, highest->id, high);
+        printf("Lowest: %s %s (ID %d), %.1f%%\n",
+               lowest->first, lowest->last, lowest->id, low);
+        report_courses(records);
+    } else {
+        puts("No marks available.");
+    }
+    if (records->count)
+        report_programmes(records);
+}
+
+/* Split a saved row into exactly the expected number of fields. */
+static int split_row(char *line, char **fields, size_t count)
+{
+    for (size_t i = 0; i < count; i++) {
+        fields[i] = line;
+        char *bar = strchr(line, '|');
+        if (i + 1 == count)
+            return bar == NULL;
+        if (!bar)
+            return 0;
+        *bar = '\0';
+        line = bar + 1;
+    }
+    return 0;
+}
+
+static int load_course(FILE *file, Student *student)
+{
+    char line[LINE_SIZE], *field[5];
+    Course course;
+    if (read_line(file, line, sizeof line) != 1 || !split_row(line, field, 5) ||
+        strcmp(field[0], "C") != 0 || !valid_text(field[1]) || !valid_text(field[2]) ||
+        !parse_number(field[4], 1, INT_MAX, &course.maximum) ||
+        !parse_number(field[3], 0, course.maximum, &course.mark) ||
+        find_course(student, field[1]))
+        return 0;
+    strcpy(course.code, field[1]);
+    strcpy(course.name, field[2]);
+    return append_course(student, course);
+}
+
+static int load_student(FILE *file, char *line, Register *records)
+{
+    char *field[7];
+    Student student = {0};
+    int courses;
+    if (!split_row(line, field, 7) || strcmp(field[0], "S") != 0 ||
+        !parse_number(field[1], 1, INT_MAX, &student.id) ||
+        !valid_text(field[2]) || !valid_text(field[3]) || !valid_text(field[4]) ||
+        !parse_number(field[5], 1, INT_MAX, &student.year) ||
+        !parse_number(field[6], 0, INT_MAX, &courses) ||
+        find_student(records, student.id))
+        return 0;
+    strcpy(student.first, field[2]);
+    strcpy(student.last, field[3]);
+    strcpy(student.programme, field[4]);
+    if (!append_student(records, student))
+        return 0;
+    Student *added = &records->students[records->count - 1];
+    for (int i = 0; i < courses; i++) {
+        if (!load_course(file, added))
+            return 0;
+    }
+    return 1;
+}
+
+static int load_records(const char *path, Register *records)
+{
+    FILE *file = fopen(path, "r");
+    if (!file) {
+        if (errno == ENOENT)
+            return 1;
+        perror(path);
+        return 0;
+    }
+    Register loaded = {0};
+    char line[LINE_SIZE];
+    int status;
+    while ((status = read_line(file, line, sizeof line)) == 1) {
+        if (!load_student(file, line, &loaded)) {
+            status = -1;
+            break;
+        }
+    }
+    int failed = status < 0 || ferror(file);
+    if (fclose(file) != 0)
+        failed = 1;
+    if (failed) {
+        fprintf(stderr, "Could not load student records from %s. Check the file and its format.\n", path);
+        free_register(&loaded);
+        return 0;
+    }
+    free_register(records);
+    *records = loaded;
+    return 1;
+}
+
+static int write_records(FILE *file, const Register *records)
+{
+    for (size_t i = 0; i < records->count; i++) {
+        const Student *student = &records->students[i];
+        if (fprintf(file, "S|%d|%s|%s|%s|%d|%zu\n", student->id, student->first,
+                    student->last, student->programme, student->year, student->course_count) < 0)
+            return 0;
+        for (size_t j = 0; j < student->course_count; j++) {
+            const Course *course = &student->courses[j];
+            if (fprintf(file, "C|%s|%s|%d|%d\n", course->code, course->name,
+                        course->mark, course->maximum) < 0)
+                return 0;
+        }
+    }
+    return 1;
+}
+
+static int save_records(const char *path, const Register *records)
+{
+    const char suffix[] = ".tmp.XXXXXX";
+    char *temporary = malloc(strlen(path) + sizeof suffix);
+    if (!temporary) {
+        fputs("Could not allocate memory to save records.\n", stderr);
+        return 0;
+    }
+    sprintf(temporary, "%s%s", path, suffix);
+    int fd = mkstemp(temporary);
+    if (fd < 0) {
+        perror(path);
+        free(temporary);
+        return 0;
+    }
+    FILE *file = fdopen(fd, "w");
+    int saved = 0;
+    if (file) {
+        int written = write_records(file, records);
+        int closed = fclose(file) == 0;
+        saved = written && closed && rename(temporary, path) == 0;
+    } else {
+        close(fd);
+    }
+    if (!saved) {
+        fprintf(stderr, "Could not save student records to %s.\n", path);
+        remove(temporary);
+    }
+    free(temporary);
+    return saved;
+}
+
 static void show_menu(void)
 {
     puts("\nStudent Academic Records\n"
          "1. Register a student\n2. List students\n3. View student and course results\n"
          "4. Update student details\n5. Delete a student\n6. Add a course\n"
-         "7. Update a course mark\n0. Exit");
+         "7. Update a course mark\n8. Search students\n9. Sort students\n"
+         "10. Show academic report\n0. Exit");
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
+    if (argc > 2) {
+        fputs("Usage: ./records [data-file]\n", stderr);
+        return 1;
+    }
+    const char *path = argc == 2 ? argv[1] : "students.txt";
     Register records = {0};
+    if (!load_records(path, &records))
+        return 1;
+    printf("Loaded %zu students.\n", records.count);
+    int unsaved = 0;
     while (!feof(stdin) && !ferror(stdin)) {
         int choice, changed = 0;
         show_menu();
-        if (!ask_number("Choose an option: ", 0, 7, &choice))
+        if (!ask_number("Choose an option: ", 0, 10, &choice))
             continue;
         if (choice == 0)
             break;
@@ -332,9 +635,19 @@ int main(void)
         case 5: changed = delete_student(&records); break;
         case 6: changed = add_course(&records); break;
         case 7: changed = update_mark(&records); break;
+        case 8: search_students(&records); break;
+        case 9: sort_students(&records); break;
+        case 10: academic_report(&records); break;
         }
-        if (changed)
-            puts("Record updated.");
+        if (changed) {
+            unsaved = !save_records(path, &records);
+            puts(unsaved ? "Record updated in memory. Changes are unsaved." : "Record saved.");
+        }
+    }
+    if (unsaved && !save_records(path, &records)) {
+        fputs("Changes could not be saved.\n", stderr);
+        free_register(&records);
+        return 1;
     }
     free_register(&records);
     return 0;
