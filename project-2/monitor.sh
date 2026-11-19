@@ -2,7 +2,7 @@
 
 export LC_ALL=C
 
-activity_log="${HOME}/.system-health.log"
+activity_log="${SYSTEM_HEALTH_LOG:-$HOME/.system-health.log}"
 
 log_activity() {
     check_tools date || return
@@ -21,14 +21,18 @@ check_tools() {
 }
 
 system_info() {
-    check_tools hostname uname uptime date || return 1
-    local os=Linux
+    check_tools uname uptime date || return 1
+    local os=Linux host
+    if ! read -r host < /proc/sys/kernel/hostname; then
+        check_tools hostname || return 1
+        host=$(hostname) || return 1
+    fi
     if [[ -r /etc/os-release ]]; then
         . /etc/os-release
         os=${PRETTY_NAME:-Linux}
     fi
     printf 'Hostname: %s\nOS: %s\nKernel: %s\nUptime: %s\nDate: %s\n' \
-        "$(hostname)" "$os" "$(uname -r)" "$(uptime -p)" "$(date)"
+        "$host" "$os" "$(uname -r)" "$(uptime -p)" "$(date)"
 }
 
 read_threshold() {
@@ -127,7 +131,11 @@ view_processes() {
             if ($1 == ENVIRON["QUERY"]) {print; found = 1}
             next
         }
-        index(tolower($4), tolower(ENVIRON["QUERY"])) {print; found = 1}
+        {
+            name = $0
+            sub(/^[[:space:]]*[^[:space:]]+[[:space:]]+[^[:space:]]+[[:space:]]+[^[:space:]]+[[:space:]]+/, "", name)
+            if (index(tolower(name), tolower(ENVIRON["QUERY"]))) { print; found = 1 }
+        }
         END {if (!found) exit 1}
     ' <<< "$processes"; then
         printf 'No matching process.\n'
