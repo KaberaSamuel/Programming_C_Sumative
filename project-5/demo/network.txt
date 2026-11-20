@@ -1,0 +1,2 @@
+The network uses iot devices.
+Each device sends readings.

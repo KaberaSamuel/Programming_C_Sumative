@@ -1,0 +1,8 @@
+Sales report
+Transactions: 3
+Total revenue: 75.00
+Average transaction: 25.00
+Highest transaction: 203 | Pen | 3 units | Unit price 12.00 | Total 36.00 | 2026-11-20
+Lowest transaction: 202 | Notebook | 1 units | Unit price 15.00 | Total 15.00 | 2026-11-19
+Total units sold: 6
+Revenue for Pen: 60.00

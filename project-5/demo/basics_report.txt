@@ -1,0 +1,10 @@
+Input file: demo/basics.txt
+Keyword: IoT
+
+Matching line numbers:
+None
+
+Total lines: 2
+Total occurrences: 0
+Matching lines: 0
+Processing status: Successful

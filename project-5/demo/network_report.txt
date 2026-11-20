@@ -1,0 +1,10 @@
+Input file: demo/network.txt
+Keyword: IoT
+
+Matching line numbers:
+1
+
+Total lines: 2
+Total occurrences: 1
+Matching lines: 1
+Processing status: Successful

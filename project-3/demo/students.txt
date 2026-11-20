@@ -1,0 +1,5 @@
+S|102|Isaac|Musa|Information Technology|1|1
+C|CSC101|Programming in C|42|100
+S|101|Amina|Kato|Information Technology|1|1
+C|CSC101|Programming in C|84|100
+S|103|Lina|Moyo|Computer Science|2|0

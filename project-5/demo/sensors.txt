@@ -1,0 +1,2 @@
+IoT sensors send data to an IoT gateway.
+The gateway stores readings.

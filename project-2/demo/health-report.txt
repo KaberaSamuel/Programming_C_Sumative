@@ -1,0 +1,30 @@
+Hostname: archlinux
+OS: Arch Linux
+Kernel: 7.3.4-arch1-1
+Uptime: up 54 minutes
+Date: Fri Nov 20 23:36:59 CAT 2026
+
+CPU usage: 1%
+
+Top processes by average CPU use
+    PID COMMAND         %CPU %MEM
+    704 Hyprland        11.3  1.1
+   5900 ChatGPT         10.3  3.8
+   5582 ChatGPT          4.4  1.7
+  13462 code             4.3  2.7
+   5531 ChatGPT          3.7  3.4
+
+Memory (MiB): 15691 total, 4814 used, 10877 available
+Memory usage: 30.7%
+
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p4  196G  127G   60G  68% /
+devtmpfs        4.0M     0  4.0M   0% /dev
+tmpfs           7.7G   38M  7.7G   1% /dev/shm
+efivarfs        268K  201K   63K  77% /sys/firmware/efi/efivars
+tmpfs           3.1G  2.0M  3.1G   1% /run
+none            1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs           7.7G   62M  7.7G   1% /tmp
+/dev/nvme0n1p5  542G   35G  480G   7% /data
+/dev/nvme0n1p1  599M   29M  571M   5% /efi
+tmpfs           1.6G  2.4M  1.6G   1% /run/user/1000

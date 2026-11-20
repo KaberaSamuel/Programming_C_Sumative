@@ -2,6 +2,10 @@
 
 In this project, I use an Arduino Uno to count how many people are inside a room that holds up to five people. One button is for entry and the other is for exit. The LCD shows how many people are inside and how many more can enter. The green LED means there is space. The red LED means the room is full.
 
+## Demonstration
+
+[Saved Tinkercad circuit](https://www.tinkercad.com/things/eUmNP0nMBtU/editel?returnTo=%2Fdashboard)
+
 ## Wiring
 
 My circuit uses an Arduino Uno, a breadboard, two push buttons, a green LED, a red LED, three 220 Ω resistors, a 16×2 LCD, a 10 kΩ potentiometer, and jumper wires. I connect 5V to the breadboard's power rail and GND to its ground rail.
@@ -22,7 +26,7 @@ I leave LCD pins DB0 to DB3 disconnected and place both buttons across the bread
 
 ## Run in Tinkercad
 
-1. Open the circuit while signed in to the account that owns it. [Saved Tinkercad circuit](https://www.tinkercad.com/things/eUmNP0nMBtU/editel?returnTo=%2Fdashboard)
+1. Open the circuit above while signed in to the account that owns it.
 2. Click **Start Simulation**. The left button is Entry and the right button is Exit.
 3. Open **Code** and expand **Serial Monitor** to see the event messages. The sketch uses 9600 baud.
 

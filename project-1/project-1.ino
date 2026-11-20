@@ -10,7 +10,7 @@ const unsigned long LCD_REFRESH_MS = 250;
 
 struct Occupancy {
   int inside;
-  int capacity;
+  int capacity;int
 };
 
 struct Button {

@@ -1,0 +1,16 @@
+Academic report
+Students: 3
+Course registrations: 2
+Passing: 1
+Failing: 1
+No courses: 1
+Overall average: 63.0%
+Highest: Amina Kato (ID 101), 84.0%
+Lowest: Isaac Musa (ID 102), 42.0%
+
+Average by course code
+CSC101: 63.0% (2 records)
+
+Students per programme
+Information Technology: 2
+Computer Science: 1
