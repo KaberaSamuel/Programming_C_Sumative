@@ -1,9 +1,11 @@
 #define _POSIX_C_SOURCE 200809L
+#include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
 
 typedef struct {
     int number;
@@ -34,12 +36,13 @@ static size_t count_matches(const char *line, size_t length, const char *keyword
     return count;
 }
 
-static void scan_document(FileTask *task, FILE *input)
+static int scan_document(FileTask *task, FILE *input, FILE *report)
 {
     char *line = NULL;
     size_t capacity = 0;
     size_t keyword_length = strlen(task->keyword);
     ssize_t bytes;
+    int written = 1;
     while ((bytes = getline(&line, &capacity, input)) >= 0) {
         size_t length = (size_t)bytes;
         if (length > 0 && line[length - 1] == '\n')
@@ -52,25 +55,107 @@ static void scan_document(FileTask *task, FILE *input)
         if (matches > 0) {
             task->matching_lines++;
             task->occurrences += matches;
+            if (fprintf(report, "%zu\n", task->lines) < 0) {
+                written = 0;
+                break;
+            }
         }
     }
-    if (ferror(input) || !feof(input))
+    if (written && (ferror(input) || !feof(input)))
         task->error = "Could not read the input file.";
     free(line);
+    return written;
+}
+
+static FILE *open_report(const char *path, char **report_name)
+{
+    const char *base = strrchr(path, '/');
+    base = base ? base + 1 : path;
+    if (*base == '\0')
+        base = "document";
+    const char *extension = strrchr(base, '.');
+    size_t length = extension && extension != base ? (size_t)(extension - base) : strlen(base);
+
+    const size_t suffix_size = 40;
+    char *name = malloc(length + suffix_size);
+    if (!name)
+        return NULL;
+    memcpy(name, base, length);
+
+    /* Reserve the name without overwriting another file or another thread's report. */
+    for (size_t number = 1; ; number++) {
+        if (number == 1)
+            snprintf(name + length, suffix_size, "_report.txt");
+        else
+            snprintf(name + length, suffix_size, "_report_%zu.txt", number);
+
+        FILE *report = fopen(name, "wx");
+        if (report) {
+            *report_name = name;
+            return report;
+        }
+        if (errno != EEXIST) {
+            free(name);
+            return NULL;
+        }
+    }
+}
+
+static int analyze_input(FileTask *task, FILE *report)
+{
+    struct stat info;
+    if (stat(task->path, &info) != 0) {
+        task->error = "Could not open the input file.";
+        return 1;
+    }
+    if (!S_ISREG(info.st_mode)) {
+        task->error = "Input must be a regular file.";
+        return 1;
+    }
+
+    FILE *input = fopen(task->path, "r");
+    if (!input) {
+        task->error = "Could not open the input file.";
+        return 1;
+    }
+    int written = scan_document(task, input, report);
+    if (fclose(input) != 0 && !task->error)
+        task->error = "Could not close the input file.";
+    return written;
+}
+
+static int write_report(FileTask *task, FILE *report)
+{
+    if (fprintf(report, "Input file: %s\nKeyword: %s\n\nMatching line numbers:\n",
+                task->path, task->keyword) < 0 || !analyze_input(task, report))
+        return 0;
+    if (task->matching_lines == 0 && fputs("None\n", report) == EOF)
+        return 0;
+    if (fprintf(report, "\nTotal lines: %zu\nTotal occurrences: %zu\nMatching lines: %zu\n"
+                "Processing status: %s\n", task->lines, task->occurrences,
+                task->matching_lines, task->error ? "Failed" : "Successful") < 0)
+        return 0;
+    return !task->error || fprintf(report, "Error: %s\n", task->error) >= 0;
 }
 
 static void *process_file(void *argument)
 {
     FileTask *task = argument;
+    char *name = NULL;
     printf("[Thread %d] Processing %s\n", task->number, task->path);
 
-    FILE *input = fopen(task->path, "r");
-    if (input) {
-        scan_document(task, input);
-        if (fclose(input) != 0 && !task->error)
-            task->error = "Could not close the input file.";
+    FILE *report = open_report(task->path, &name);
+    if (report) {
+        int written = write_report(task, report);
+        if (fclose(report) != 0 || !written) {
+            task->error = "Could not write the report.";
+            if (remove(name) != 0)
+                printf("[Thread %d] Could not remove incomplete report %s\n", task->number, name);
+        } else {
+            printf("[Thread %d] Saved %s\n", task->number, name);
+        }
     } else {
-        task->error = "Could not open the input file.";
+        task->error = "Could not create the report.";
     }
 
     if (task->error) {
@@ -79,6 +164,7 @@ static void *process_file(void *argument)
         printf("[Thread %d] Finished %s: %zu occurrences on %zu of %zu lines\n",
                task->number, task->path, task->occurrences, task->matching_lines, task->lines);
     }
+    free(name);
     return NULL;
 }
 
