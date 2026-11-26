@@ -8,12 +8,14 @@ const int RED_LED_PIN = 9;
 const unsigned long DEBOUNCE_MS = 30;
 const unsigned long LCD_REFRESH_MS = 250;
 
-struct Occupancy {
+struct Occupancy
+{
   int inside;
-  int capacity;int
+  int capacity;
 };
 
-struct Button {
+struct Button
+{
   int pin;
   int lastReading;
   int stableState;
@@ -27,23 +29,28 @@ void updateStatusLights(const Occupancy *record);
 void updateDisplay(const Occupancy *record);
 void handleEntry(Occupancy *record);
 void handleExit(Occupancy *record);
+bool validRecord(const Occupancy *record);
+void releaseOccupancy();
 
 Occupancy *occupancy = NULL;
 Button entryButton = {2, HIGH, HIGH, 0};
 Button exitButton = {3, HIGH, HIGH, 0};
-LiquidCrystal lcd(12, 11, 7, 6, 5, 4);  // RS, E, D4, D5, D6, D7
+LiquidCrystal lcd(12, 11, 7, 6, 5, 4); // RS, E, D4, D5, D6, D7
 unsigned long lastLcdUpdate = 0;
 
 // Report one press when the input settles low. A release rearms the button.
-bool buttonPressed(Button *button, unsigned long now) {
+bool buttonPressed(Button *button, unsigned long now)
+{
   int reading = digitalRead(button->pin);
 
-  if (reading != button->lastReading) {
+  if (reading != button->lastReading)
+  {
     button->lastReading = reading;
     button->changedAt = now;
   }
 
-  if (reading != button->stableState && now - button->changedAt >= DEBOUNCE_MS) {
+  if (reading != button->stableState && now - button->changedAt >= DEBOUNCE_MS)
+  {
     button->stableState = reading;
     return reading == LOW;
   }
@@ -51,7 +58,8 @@ bool buttonPressed(Button *button, unsigned long now) {
   return false;
 }
 
-void logEvent(const char *message, const Occupancy *record) {
+void logEvent(const char *message, const Occupancy *record)
+{
   Serial.print(message);
   Serial.print(" | Inside: ");
   Serial.print(record->inside);
@@ -59,13 +67,15 @@ void logEvent(const char *message, const Occupancy *record) {
   Serial.println(record->capacity - record->inside);
 }
 
-void updateStatusLights(const Occupancy *record) {
+void updateStatusLights(const Occupancy *record)
+{
   bool full = record->inside == record->capacity;
   digitalWrite(GREEN_LED_PIN, full ? LOW : HIGH);
   digitalWrite(RED_LED_PIN, full ? HIGH : LOW);
 }
 
-void updateDisplay(const Occupancy *record) {
+void updateDisplay(const Occupancy *record)
+{
   // Pad each row to 16 characters so old digits are overwritten.
   char line[17];
   snprintf(line, sizeof(line), "Inside: %-8d", record->inside);
@@ -76,8 +86,10 @@ void updateDisplay(const Occupancy *record) {
   lcd.print(line);
 }
 
-void handleEntry(Occupancy *record) {
-  if (record->inside == record->capacity) {
+void handleEntry(Occupancy *record)
+{
+  if (record->inside == record->capacity)
+  {
     logEvent("Entry rejected: facility is full", record);
     return;
   }
@@ -87,8 +99,10 @@ void handleEntry(Occupancy *record) {
   logEvent("Entry accepted", record);
 }
 
-void handleExit(Occupancy *record) {
-  if (record->inside == 0) {
+void handleExit(Occupancy *record)
+{
+  if (record->inside == 0)
+  {
     logEvent("Exit rejected: facility is empty", record);
     return;
   }
@@ -98,7 +112,26 @@ void handleExit(Occupancy *record) {
   logEvent("Exit accepted", record);
 }
 
-void setup() {
+// Check that the count is still within the room limits.
+bool validRecord(const Occupancy *record)
+{
+  return record->inside >= 0 && record->inside <= record->capacity;
+}
+
+// Free a damaged record and stop counting. The red LED signals the fault.
+void releaseOccupancy()
+{
+  free(occupancy);
+  occupancy = NULL;
+  digitalWrite(GREEN_LED_PIN, LOW);
+  digitalWrite(RED_LED_PIN, HIGH);
+  lcd.clear();
+  lcd.print("System error");
+  Serial.println("Error: invalid occupancy record, memory released");
+}
+
+void setup()
+{
   Serial.begin(9600);
   pinMode(entryButton.pin, INPUT_PULLUP);
   pinMode(exitButton.pin, INPUT_PULLUP);
@@ -106,7 +139,8 @@ void setup() {
   pinMode(RED_LED_PIN, OUTPUT);
 
   occupancy = (Occupancy *)malloc(sizeof(Occupancy));
-  if (occupancy == NULL) {
+  if (occupancy == NULL)
+  {
     Serial.println("Error: could not allocate occupancy record");
     return;
   }
@@ -120,19 +154,30 @@ void setup() {
   logEvent("System ready", occupancy);
 }
 
-void loop() {
-  if (occupancy == NULL) {
+void loop()
+{
+  if (occupancy == NULL)
+  {
+    return;
+  }
+
+  if (!validRecord(occupancy))
+  {
+    releaseOccupancy();
     return;
   }
 
   unsigned long now = millis();
-  if (buttonPressed(&exitButton, now)) {
+  if (buttonPressed(&exitButton, now))
+  {
     handleExit(occupancy);
   }
-  if (buttonPressed(&entryButton, now)) {
+  if (buttonPressed(&entryButton, now))
+  {
     handleEntry(occupancy);
   }
-  if (now - lastLcdUpdate >= LCD_REFRESH_MS) {
+  if (now - lastLcdUpdate >= LCD_REFRESH_MS)
+  {
     lastLcdUpdate = now;
     updateDisplay(occupancy);
   }

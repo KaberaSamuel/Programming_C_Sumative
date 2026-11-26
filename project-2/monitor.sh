@@ -4,12 +4,14 @@ export LC_ALL=C
 
 activity_log="${SYSTEM_HEALTH_LOG:-$HOME/.system-health.log}"
 
+# Keep a timestamped history of actions and warnings.
 log_activity() {
     check_tools date || return
     printf '[%s] %s\n' "$(date '+%F %T')" "$*" >> "$activity_log" ||
         printf 'Could not write to the activity log.\n' >&2
 }
 
+# Stop early with a clear message if a command is missing.
 check_tools() {
     local tool
     for tool in "$@"; do
@@ -20,6 +22,7 @@ check_tools() {
     done
 }
 
+# Identify the machine, its OS and how long it has been running.
 system_info() {
     check_tools uname uptime date || return 1
     local os=Linux host
@@ -35,6 +38,7 @@ system_info() {
         "$host" "$os" "$(uname -r)" "$(uptime -p)" "$(date)"
 }
 
+# Accept only a whole percentage as a warning limit.
 read_threshold() {
     local value
     read -r -p "$1 threshold (0 to 100): " value || return 1
@@ -45,6 +49,7 @@ read_threshold() {
     printf '%d\n' "$((10#$value))"
 }
 
+# Take one reading of total and idle CPU time.
 cpu_ticks() {
     awk '/^cpu / {
         total = 0
@@ -54,6 +59,7 @@ cpu_ticks() {
     }' /proc/stat
 }
 
+# Measure current CPU load and show the busiest processes.
 cpu_info() {
     check_tools awk sleep ps || return 1
     local first second total1 idle1 total2 idle2 elapsed usage processes
@@ -77,6 +83,7 @@ cpu_info() {
     fi
 }
 
+# Show memory use and warn above the limit.
 memory_info() {
     check_tools free awk || return 1
     local memory
@@ -94,6 +101,7 @@ memory_info() {
     ' <<< "$memory"
 }
 
+# Show filesystem use and warn about those filling up.
 disk_info() {
     check_tools df awk || return 1
     local disks
@@ -106,6 +114,7 @@ disk_info() {
     ' <<< "$disks"
 }
 
+# Run one resource check with a user limit and log the result.
 monitor() {
     local threshold result
     threshold=$(read_threshold "$1") || return
@@ -118,6 +127,7 @@ monitor() {
     fi
 }
 
+# List processes or find one by PID or name.
 view_processes() {
     check_tools ps awk || return
     local query processes
@@ -143,6 +153,7 @@ view_processes() {
     log_activity "Viewed or searched processes: ${query:-all}."
 }
 
+# Protect this script and the shells that started it.
 protected_pid() {
     local current=$$
     while (( current > 1 )); do
@@ -156,10 +167,12 @@ protected_pid() {
     return 1
 }
 
+# Capture a process identity so changes can be detected.
 process_details() {
     ps -p "$1" -o euid=,tty=,lstart=,comm=
 }
 
+# Safely stop one of the user's own processes after confirmation.
 terminate_process() {
     check_tools ps || return
     local pid details owner terminal rest answer
@@ -202,11 +215,13 @@ terminate_process() {
     fi
 }
 
+# Combine all health checks into one report.
 write_report() {
     system_info && printf '\n' && cpu_info && printf '\n' &&
         memory_info && printf '\n' && disk_info
 }
 
+# Save a timestamped report in a chosen directory.
 generate_report() {
     check_tools date mktemp rm || return
     local directory report stamp
@@ -231,6 +246,7 @@ generate_report() {
     fi
 }
 
+# Let the user inspect the activity or system log.
 view_history() {
     local choice
     printf '%s\n' '1. Activity log' '2. Recent system log entries'
@@ -252,6 +268,7 @@ view_history() {
     esac
 }
 
+# Erase the activity log only after confirmation.
 clear_log() {
     local answer
     read -r -p 'Clear the activity log? [y/N] ' answer || return
@@ -271,6 +288,7 @@ show_menu() {
         '7. Generate a health report' '8. View logs' '9. Clear the activity log' '0. Exit'
 }
 
+# Repeat the menu until the user exits.
 main() {
     local choice
     while true; do

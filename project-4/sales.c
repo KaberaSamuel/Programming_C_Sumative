@@ -10,7 +10,8 @@
 #define TEXT_SIZE 64
 #define LINE_SIZE 512
 
-typedef struct {
+typedef struct
+{
     int id;
     char product[TEXT_SIZE];
     int quantity;
@@ -19,22 +20,28 @@ typedef struct {
     char date[11];
 } Transaction;
 
-typedef struct {
+typedef struct
+{
     Transaction *items;
     size_t count;
     size_t capacity;
 } Sales;
 
+/* Read one whole line and reject lines that are too long. */
 static int read_line(FILE *file, char *line, size_t size)
 {
     if (!fgets(line, size, file))
         return 0;
     char *newline = strchr(line, '\n');
-    if (newline) {
+    if (newline)
+    {
         *newline = '\0';
-    } else if (!feof(file)) {
+    }
+    else if (!feof(file))
+    {
         int ch;
-        while ((ch = fgetc(file)) != '\n' && ch != EOF) {
+        while ((ch = fgetc(file)) != '\n' && ch != EOF)
+        {
         }
         return -1;
     }
@@ -51,6 +58,7 @@ static int prompt(const char *label, char *line)
     return read_line(stdin, line, LINE_SIZE);
 }
 
+/* Accept only a whole number within the allowed range. */
 static int parse_number(const char *text, int min, int max, int *value)
 {
     char *end;
@@ -73,13 +81,15 @@ static int ask_number(const char *label, int min, int max, int *value)
     return 0;
 }
 
+/* Reject blank text and characters that would break the data file. */
 static int valid_text(const char *text)
 {
     size_t length = strlen(text);
     if (length == 0 || length >= TEXT_SIZE || strchr(text, '|'))
         return 0;
     int has_text = 0;
-    for (size_t i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++)
+    {
         unsigned char ch = (unsigned char)text[i];
         if (iscntrl(ch))
             return 0;
@@ -93,7 +103,8 @@ static int ask_text(const char *label, char *value)
 {
     char line[LINE_SIZE];
     int status = prompt(label, line);
-    if (status == 1 && valid_text(line)) {
+    if (status == 1 && valid_text(line))
+    {
         strcpy(value, line);
         return 1;
     }
@@ -113,7 +124,8 @@ static int parse_money(const char *text, long long *cents)
     if (errno || whole > (LLONG_MAX - 99) / 100)
         return 0;
     int fraction = 0;
-    if (*end == '.') {
+    if (*end == '.')
+    {
         end++;
         if (!isdigit((unsigned char)*end))
             return 0;
@@ -143,11 +155,13 @@ static void show_money(long long cents)
     printf("%lld.%02lld", cents / 100, cents % 100);
 }
 
+/* Reject dates that do not exist, including leap year cases. */
 static int valid_date(const char *date)
 {
     if (strlen(date) != 10 || date[4] != '-' || date[7] != '-')
         return 0;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++)
+    {
         if (i != 4 && i != 7 && !isdigit((unsigned char)date[i]))
             return 0;
     }
@@ -161,9 +175,11 @@ static int valid_date(const char *date)
     return day <= days[month - 1];
 }
 
+/* Search for a transaction by unique ID. */
 static Transaction *find_id(Sales *sales, int id)
 {
-    for (size_t i = 0; i < sales->count; i++) {
+    for (size_t i = 0; i < sales->count; i++)
+    {
         if (sales->items[i].id == id)
             return &sales->items[i];
     }
@@ -181,16 +197,19 @@ static Transaction *select_transaction(Sales *sales)
     return item;
 }
 
+/* Double the array capacity when it is full. */
 static int append_transaction(Sales *sales, Transaction item)
 {
-    if (sales->count == sales->capacity) {
+    if (sales->count == sales->capacity)
+    {
         size_t capacity = sales->capacity ? sales->capacity * 2 : 4;
         Transaction *items;
         if (sales->items)
             items = realloc(sales->items, capacity * sizeof *items);
         else
             items = malloc(capacity * sizeof *items);
-        if (!items) {
+        if (!items)
+        {
             puts("Could not allocate memory for the transaction.");
             return 0;
         }
@@ -201,6 +220,7 @@ static int append_transaction(Sales *sales, Transaction item)
     return 1;
 }
 
+/* Calculate the total and guard against overflow. */
 static int set_total(Transaction *item)
 {
     if (item->price > LLONG_MAX / item->quantity)
@@ -216,11 +236,13 @@ static int read_transaction(Transaction *item)
         !ask_number("Quantity: ", 1, INT_MAX, &item->quantity) ||
         !ask_money("Unit price: ", &item->price))
         return 0;
-    if (!set_total(item)) {
+    if (!set_total(item))
+    {
         puts("The transaction total is too large.");
         return 0;
     }
-    if (prompt("Date (YYYY-MM-DD): ", date) != 1 || !valid_date(date)) {
+    if (prompt("Date (YYYY-MM-DD): ", date) != 1 || !valid_date(date))
+    {
         puts("Enter a valid date as YYYY-MM-DD.");
         return 0;
     }
@@ -228,12 +250,14 @@ static int read_transaction(Transaction *item)
     return 1;
 }
 
+/* Record a new sale with a unique ID. */
 static int add_transaction(Sales *sales)
 {
     Transaction item = {0};
     if (!ask_number("New transaction ID: ", 1, INT_MAX, &item.id))
         return 0;
-    if (find_id(sales, item.id)) {
+    if (find_id(sales, item.id))
+    {
         puts("That transaction ID already exists.");
         return 0;
     }
@@ -257,6 +281,7 @@ static void list_transactions(const Sales *sales)
         show_transaction(&sales->items[i]);
 }
 
+/* Edit a copy so invalid input leaves the sale unchanged. */
 static int update_transaction(Sales *sales)
 {
     Transaction *item = select_transaction(sales);
@@ -276,6 +301,7 @@ static int confirm(const char *label)
            (strcmp(answer, "y") == 0 || strcmp(answer, "Y") == 0);
 }
 
+/* Remove a sale after confirmation and close the gap. */
 static int delete_transaction(Sales *sales)
 {
     Transaction *item = select_transaction(sales);
@@ -288,10 +314,12 @@ static int delete_transaction(Sales *sales)
     return 1;
 }
 
+/* Sum all sales, or only one product when given. */
 static long double revenue(const Sales *sales, const char *product)
 {
     long double cents = 0;
-    for (size_t i = 0; i < sales->count; i++) {
+    for (size_t i = 0; i < sales->count; i++)
+    {
         const Transaction *item = &sales->items[i];
         if (!product || strcmp(item->product, product) == 0)
             cents += item->total;
@@ -312,12 +340,14 @@ static void show_average(const Sales *sales)
         puts("Average transaction: no sales yet.");
 }
 
+/* Find the highest or lowest value sale. */
 static const Transaction *extreme(const Sales *sales, int highest)
 {
     if (!sales->count)
         return NULL;
     const Transaction *best = &sales->items[0];
-    for (size_t i = 1; i < sales->count; i++) {
+    for (size_t i = 1; i < sales->count; i++)
+    {
         const Transaction *item = &sales->items[i];
         if ((highest && item->total > best->total) || (!highest && item->total < best->total))
             best = item;
@@ -353,11 +383,11 @@ static void show_units(const Sales *sales)
     printf("Total units sold: %llu\n", units);
 }
 
+/* Choose a calculation through a function pointer. */
 static void process_sales(const Sales *sales)
 {
     void (*operations[])(const Sales *) = {
-        show_revenue, show_average, show_highest, show_lowest, show_units
-    };
+        show_revenue, show_average, show_highest, show_lowest, show_units};
     int choice;
     puts("1. Revenue  2. Average  3. Highest  4. Lowest  5. Units sold");
     if (ask_number("Processing option: ", 1, 5, &choice))
@@ -366,13 +396,16 @@ static void process_sales(const Sales *sales)
 
 typedef int (*Match)(const Transaction *, const char *, long long);
 
+/* Show and count sales accepted by the callback. */
 static size_t show_matches(const Sales *sales, Match match,
                            const char *product, long long amount)
 {
     size_t count = 0;
-    for (size_t i = 0; i < sales->count; i++) {
+    for (size_t i = 0; i < sales->count; i++)
+    {
         const Transaction *item = &sales->items[i];
-        if (match(item, product, amount)) {
+        if (match(item, product, amount))
+        {
             show_transaction(item);
             count++;
         }
@@ -404,12 +437,15 @@ static void filter_transactions(const Sales *sales)
     size_t count;
     if (!ask_number("1. Above an amount  2. By product: ", 1, 2, &choice))
         return;
-    if (choice == 1) {
+    if (choice == 1)
+    {
         long long amount;
         if (!ask_money("Amount: ", &amount))
             return;
         count = show_matches(sales, above_amount, NULL, amount);
-    } else {
+    }
+    else
+    {
         char product[TEXT_SIZE];
         if (!ask_text("Product: ", product))
             return;
@@ -418,24 +454,29 @@ static void filter_transactions(const Sales *sales)
     printf("Matching transactions: %zu\n", count);
 }
 
+/* Find sales by ID, product or exact total. */
 static void search_transactions(Sales *sales)
 {
     int choice;
     size_t count;
     if (!ask_number("1. ID  2. Product  3. Exact amount: ", 1, 3, &choice))
         return;
-    if (choice == 1) {
+    if (choice == 1)
+    {
         Transaction *item = select_transaction(sales);
         if (item)
             show_transaction(item);
         return;
     }
-    if (choice == 2) {
+    if (choice == 2)
+    {
         char product[TEXT_SIZE];
         if (!ask_text("Product: ", product))
             return;
         count = show_matches(sales, same_product, product, 0);
-    } else {
+    }
+    else
+    {
         long long amount;
         if (!ask_money("Amount: ", &amount))
             return;
@@ -467,11 +508,14 @@ static int by_large_amount(const Transaction *a, const Transaction *b)
     return a->total > b->total;
 }
 
+/* Sort manually in the order set by the callback. */
 static void selection_sort(Sales *sales, ComesBefore before)
 {
-    for (size_t i = 0; i < sales->count; i++) {
+    for (size_t i = 0; i < sales->count; i++)
+    {
         size_t best = i;
-        for (size_t j = i + 1; j < sales->count; j++) {
+        for (size_t j = i + 1; j < sales->count; j++)
+        {
             if (before(&sales->items[j], &sales->items[best]))
                 best = j;
         }
@@ -493,6 +537,7 @@ static int sort_transactions(Sales *sales)
     return sales->count > 1;
 }
 
+/* Summarize all sales and one chosen product. */
 static void sales_report(const Sales *sales)
 {
     printf("\nSales report\nTransactions: %zu\n", sales->count);
@@ -501,7 +546,8 @@ static void sales_report(const Sales *sales)
     show_highest(sales);
     show_lowest(sales);
     show_units(sales);
-    if (sales->count) {
+    if (sales->count)
+    {
         char product[TEXT_SIZE];
         if (ask_text("Product for revenue: ", product))
             printf("Revenue for %s: %.2Lf\n", product, revenue(sales, product) / 100);
@@ -510,7 +556,8 @@ static void sales_report(const Sales *sales)
 
 static int split_row(char *line, char **fields, size_t count)
 {
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++)
+    {
         fields[i] = line;
         char *bar = strchr(line, '|');
         if (i + 1 == count)
@@ -523,6 +570,7 @@ static int split_row(char *line, char **fields, size_t count)
     return 0;
 }
 
+/* Validate one saved row before adding it. */
 static int load_transaction(char *line, Sales *sales)
 {
     char *field[5];
@@ -537,10 +585,12 @@ static int load_transaction(char *line, Sales *sales)
     return append_transaction(sales, item);
 }
 
+/* Load into a temporary list so a bad file changes nothing. */
 static int load_sales(const char *path, Sales *sales, int startup)
 {
     FILE *file = fopen(path, "r");
-    if (!file) {
+    if (!file)
+    {
         if (startup && errno == ENOENT)
             return 1;
         perror(path);
@@ -549,8 +599,10 @@ static int load_sales(const char *path, Sales *sales, int startup)
     Sales loaded = {0};
     char line[LINE_SIZE];
     int status;
-    while ((status = read_line(file, line, sizeof line)) == 1) {
-        if (!load_transaction(line, &loaded)) {
+    while ((status = read_line(file, line, sizeof line)) == 1)
+    {
+        if (!load_transaction(line, &loaded))
+        {
             status = -1;
             break;
         }
@@ -558,7 +610,8 @@ static int load_sales(const char *path, Sales *sales, int startup)
     int failed = status < 0 || ferror(file);
     if (fclose(file) != 0)
         failed = 1;
-    if (failed) {
+    if (failed)
+    {
         fprintf(stderr, "Could not load sales from %s. Check the file and its format.\n", path);
         free(loaded.items);
         return 0;
@@ -570,7 +623,8 @@ static int load_sales(const char *path, Sales *sales, int startup)
 
 static int write_sales(FILE *file, const Sales *sales)
 {
-    for (size_t i = 0; i < sales->count; i++) {
+    for (size_t i = 0; i < sales->count; i++)
+    {
         const Transaction *item = &sales->items[i];
         if (fprintf(file, "%d|%s|%d|%lld.%02lld|%s\n", item->id, item->product, item->quantity,
                     item->price / 100, item->price % 100, item->date) < 0)
@@ -579,33 +633,42 @@ static int write_sales(FILE *file, const Sales *sales)
     return 1;
 }
 
+/* Write a temporary file first so a failed save keeps the old data. */
 static int save_sales(const char *path, const Sales *sales)
 {
     const char suffix[] = ".tmp.XXXXXX";
     char *temporary = malloc(strlen(path) + sizeof suffix);
-    if (!temporary) {
+    if (!temporary)
+    {
         fputs("Could not allocate memory to save sales.\n", stderr);
         return 0;
     }
     sprintf(temporary, "%s%s", path, suffix);
     int fd = mkstemp(temporary);
-    if (fd < 0) {
+    if (fd < 0)
+    {
         perror(path);
         free(temporary);
         return 0;
     }
     FILE *file = fdopen(fd, "w");
     int saved = 0;
-    if (file) {
+    if (file)
+    {
         int written = write_sales(file, sales);
         int closed = fclose(file) == 0;
         saved = written && closed && rename(temporary, path) == 0;
-    } else {
+    }
+    else
+    {
         close(fd);
     }
-    if (saved) {
+    if (saved)
+    {
         puts("Transactions saved.");
-    } else {
+    }
+    else
+    {
         fprintf(stderr, "Could not save sales to %s.\n", path);
         remove(temporary);
     }
@@ -624,7 +687,8 @@ static void show_menu(void)
 
 int main(int argc, char **argv)
 {
-    if (argc > 2) {
+    if (argc > 2)
+    {
         fputs("Usage: ./sales [data-file]\n", stderr);
         return 1;
     }
@@ -634,45 +698,67 @@ int main(int argc, char **argv)
         return 1;
     printf("Loaded %zu transactions.\n", sales.count);
     int unsaved = 0;
-    while (!feof(stdin) && !ferror(stdin)) {
+    while (!feof(stdin) && !ferror(stdin))
+    {
         int choice, changed = 0;
         show_menu();
         if (!ask_number("Choose an option: ", 0, 11, &choice))
             continue;
-        if (choice == 0) {
+        if (choice == 0)
+        {
             if (!unsaved || !confirm("Save changes before exiting? [y/N] ") ||
-                save_sales(path, &sales)) {
+                save_sales(path, &sales))
+            {
                 unsaved = 0;
                 break;
             }
             continue;
         }
-        switch (choice) {
-        case 1: changed = add_transaction(&sales); break;
-        case 2: list_transactions(&sales); break;
-        case 3: changed = update_transaction(&sales); break;
-        case 4: changed = delete_transaction(&sales); break;
-        case 5: process_sales(&sales); break;
-        case 6: filter_transactions(&sales); break;
-        case 7: search_transactions(&sales); break;
+        switch (choice)
+        {
+        case 1:
+            changed = add_transaction(&sales);
+            break;
+        case 2:
+            list_transactions(&sales);
+            break;
+        case 3:
+            changed = update_transaction(&sales);
+            break;
+        case 4:
+            changed = delete_transaction(&sales);
+            break;
+        case 5:
+            process_sales(&sales);
+            break;
+        case 6:
+            filter_transactions(&sales);
+            break;
+        case 7:
+            search_transactions(&sales);
+            break;
         case 8:
             if (sort_transactions(&sales))
                 unsaved = 1;
             break;
-        case 9: sales_report(&sales); break;
+        case 9:
+            sales_report(&sales);
+            break;
         case 10:
             if (save_sales(path, &sales))
                 unsaved = 0;
             break;
         case 11:
             if ((!unsaved || confirm("Replace unsaved changes? [y/N] ")) &&
-                load_sales(path, &sales, 0)) {
+                load_sales(path, &sales, 0))
+            {
                 unsaved = 0;
                 printf("Loaded %zu transactions.\n", sales.count);
             }
             break;
         }
-        if (changed) {
+        if (changed)
+        {
             puts("Transaction updated.");
             unsaved = 1;
         }

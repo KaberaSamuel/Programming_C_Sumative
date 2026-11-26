@@ -32,6 +32,7 @@ typedef struct {
     size_t count;
 } Register;
 
+/* Read one whole line and reject lines that are too long. */
 static int read_line(FILE *file, char *line, size_t size)
 {
     if (!fgets(line, size, file))
@@ -58,6 +59,7 @@ static int prompt(const char *label, char *line)
     return read_line(stdin, line, LINE_SIZE);
 }
 
+/* Accept only a whole number within the allowed range. */
 static int parse_number(const char *text, int min, int max, int *value)
 {
     char *end;
@@ -80,6 +82,7 @@ static int ask_number(const char *label, int min, int max, int *value)
     return 0;
 }
 
+/* Reject blank text and characters that would break the data file. */
 static int valid_text(const char *text)
 {
     size_t length = strlen(text);
@@ -109,6 +112,7 @@ static int ask_text(const char *label, char *value)
     return 0;
 }
 
+/* Search for a student by unique ID. */
 static Student *find_student(Register *records, int id)
 {
     for (size_t i = 0; i < records->count; i++) {
@@ -118,6 +122,7 @@ static Student *find_student(Register *records, int id)
     return NULL;
 }
 
+/* Search one student's courses by code. */
 static Course *find_course(Student *student, const char *code)
 {
     for (size_t i = 0; i < student->course_count; i++) {
@@ -138,6 +143,7 @@ static Student *select_student(Register *records)
     return student;
 }
 
+/* Grow the student array to hold one more record. */
 static int append_student(Register *records, Student student)
 {
     size_t bytes = (records->count + 1) * sizeof student;
@@ -159,6 +165,7 @@ static int read_profile(Student *student)
            ask_number("Year: ", 1, INT_MAX, &student->year);
 }
 
+/* Add a new student with a unique ID. */
 static int register_student(Register *records)
 {
     Student student = {0};
@@ -191,6 +198,7 @@ static double course_grade(const Course *course)
     return 100.0 * course->mark / course->maximum;
 }
 
+/* Weigh the average by the maximum marks of each course. */
 static double student_average(const Student *student)
 {
     double earned = 0;
@@ -220,6 +228,7 @@ static void show_details(Register *records)
         puts("No courses registered.");
 }
 
+/* Edit a copy so invalid input leaves the record unchanged. */
 static int update_student(Register *records)
 {
     Student *student = select_student(records);
@@ -232,6 +241,7 @@ static int update_student(Register *records)
     return 1;
 }
 
+/* Remove a student and free their course memory. */
 static int delete_student(Register *records)
 {
     Student *student = select_student(records);
@@ -255,6 +265,7 @@ static int delete_student(Register *records)
     return 1;
 }
 
+/* Grow a student's course array by one. */
 static int append_course(Student *student, Course course)
 {
     Course *courses = realloc(student->courses, (student->course_count + 1) * sizeof course);
@@ -267,6 +278,7 @@ static int append_course(Student *student, Course course)
     return 1;
 }
 
+/* Register a new course and its mark. */
 static int add_course(Register *records)
 {
     Student *student = select_student(records);
@@ -284,6 +296,7 @@ static int add_course(Register *records)
     return append_course(student, course);
 }
 
+/* Change the mark for an existing course. */
 static int update_mark(Register *records)
 {
     Student *student = select_student(records);
@@ -298,6 +311,7 @@ static int update_mark(Register *records)
     return ask_number("New mark: ", 0, course->maximum, &course->mark);
 }
 
+/* Release each course array before the student array. */
 static void free_register(Register *records)
 {
     for (size_t i = 0; i < records->count; i++)
@@ -306,6 +320,7 @@ static void free_register(Register *records)
     *records = (Register){0};
 }
 
+/* Find students by ID, name or programme. */
 static void search_students(Register *records)
 {
     int choice;
@@ -337,6 +352,7 @@ static void search_students(Register *records)
         puts("No matching students.");
 }
 
+/* Decide the order of two students for the chosen sort. */
 static int comes_before(const Student *a, const Student *b, int order)
 {
     switch (order) {
@@ -353,6 +369,7 @@ static int comes_before(const Student *a, const Student *b, int order)
     }
 }
 
+/* Selection sort, written manually. */
 static void sort_students(Register *records)
 {
     int order;
@@ -371,6 +388,7 @@ static void sort_students(Register *records)
     list_students(records);
 }
 
+/* A student passes only if every course is at least 50%. */
 static int passes_all_courses(const Student *student)
 {
     for (size_t i = 0; i < student->course_count; i++) {
@@ -422,6 +440,7 @@ static void report_courses(Register *records)
     }
 }
 
+/* Summarize performance, ignoring students with no courses in averages. */
 static void academic_report(Register *records)
 {
     size_t courses = 0, graded = 0, passed = 0;
@@ -494,6 +513,7 @@ static int load_course(FILE *file, Student *student)
     return append_course(student, course);
 }
 
+/* Rebuild one student and their courses from the file. */
 static int load_student(FILE *file, char *line, Register *records)
 {
     char *field[7];
@@ -519,6 +539,7 @@ static int load_student(FILE *file, char *line, Register *records)
     return 1;
 }
 
+/* Load into a temporary list so a bad file changes nothing. */
 static int load_records(const char *path, Register *records)
 {
     FILE *file = fopen(path, "r");
@@ -567,6 +588,7 @@ static int write_records(FILE *file, const Register *records)
     return 1;
 }
 
+/* Write a temporary file first so a failed save keeps the old data. */
 static int save_records(const char *path, const Register *records)
 {
     const char suffix[] = ".tmp.XXXXXX";

@@ -19,6 +19,7 @@ typedef struct {
     size_t matching_lines;
 } FileTask;
 
+/* Count keyword hits in a line, ignoring case and overlaps. */
 static size_t count_matches(const char *line, size_t length, const char *keyword,
                             size_t keyword_length)
 {
@@ -36,6 +37,7 @@ static size_t count_matches(const char *line, size_t length, const char *keyword
     return count;
 }
 
+/* Collect line totals and record matching line numbers. */
 static int scan_document(FileTask *task, FILE *input, FILE *report)
 {
     char *line = NULL;
@@ -67,6 +69,7 @@ static int scan_document(FileTask *task, FILE *input, FILE *report)
     return written;
 }
 
+/* Create a new report without overwriting an existing file. */
 static FILE *open_report(const char *path, char **report_name)
 {
     const char *base = strrchr(path, '/');
@@ -101,6 +104,7 @@ static FILE *open_report(const char *path, char **report_name)
     }
 }
 
+/* Check that the input is a readable regular file, then scan it. */
 static int analyze_input(FileTask *task, FILE *report)
 {
     struct stat info;
@@ -124,6 +128,7 @@ static int analyze_input(FileTask *task, FILE *report)
     return written;
 }
 
+/* Write the findings and final status for one file. */
 static int write_report(FileTask *task, FILE *report)
 {
     if (fprintf(report, "Input file: %s\nKeyword: %s\n\nMatching line numbers:\n",
@@ -138,6 +143,7 @@ static int write_report(FileTask *task, FILE *report)
     return !task->error || fprintf(report, "Error: %s\n", task->error) >= 0;
 }
 
+/* Do one worker's full job on its own file. */
 static void *process_file(void *argument)
 {
     FileTask *task = argument;
@@ -168,6 +174,32 @@ static void *process_file(void *argument)
     return NULL;
 }
 
+/* Give one worker its number, input file and keyword. */
+static void init_task(FileTask *task, int number, const char *path, const char *keyword)
+{
+    task->number = number;
+    task->path = path;
+    task->keyword = keyword;
+}
+
+/* Show each file's outcome and report whether all of them succeeded. */
+static int show_summary(const FileTask *tasks, int count)
+{
+    int result = EXIT_SUCCESS;
+    puts("\nProcessing summary");
+    for (int i = 0; i < count; i++) {
+        const FileTask *task = &tasks[i];
+        if (task->error) {
+            printf("%s: Failed (%s)\n", task->path, task->error);
+            result = EXIT_FAILURE;
+        } else {
+            printf("%s: Completed\n", task->path);
+        }
+    }
+    return result;
+}
+
+/* Start one thread per file and wait for all of them. */
 int main(int argc, char **argv)
 {
     if (argc < 3 || argv[1][0] == '\0') {
@@ -185,9 +217,7 @@ int main(int argc, char **argv)
     printf("Document Search\nKeyword: %s\nInput files: %d\n\n", argv[1], count);
     for (int i = 0; i < count; i++) {
         FileTask *task = &tasks[i];
-        task->number = i + 1;
-        task->path = argv[i + 2];
-        task->keyword = argv[1];
+        init_task(task, i + 1, argv[i + 2], argv[1]);
         printf("[Thread %d] Creating worker for %s\n", task->number, task->path);
         int status = pthread_create(&task->thread, NULL, process_file, task);
         if (status == 0) {
@@ -212,17 +242,7 @@ int main(int argc, char **argv)
     if (join_failed)
         return EXIT_FAILURE;
 
-    int result = EXIT_SUCCESS;
-    puts("\nProcessing summary");
-    for (int i = 0; i < count; i++) {
-        FileTask *task = &tasks[i];
-        if (task->error) {
-            printf("%s: Failed (%s)\n", task->path, task->error);
-            result = EXIT_FAILURE;
-        } else {
-            printf("%s: Completed\n", task->path);
-        }
-    }
+    int result = show_summary(tasks, count);
     free(tasks);
     return result;
 }
