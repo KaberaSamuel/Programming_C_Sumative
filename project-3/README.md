@@ -4,46 +4,37 @@ I use this program to keep student details, register courses, and check academic
 
 ## Demonstration
 
-I use three fictional records and add a fourth to try the editing options.
-
-From this folder, build the program and copy the sample records to a temporary file.
+I start with three fictional records and add a fourth to try the editing options. From this folder, run:
 
 ```bash
-demo_dir=$(mktemp -d)
-cp demo/students.txt "$demo_dir/students.txt"
-gcc -std=c11 -Wall -Wextra -Wpedantic records.c -o "$demo_dir/records"
-"$demo_dir/records" "$demo_dir/students.txt"
+cp demo/students.txt students.txt
+gcc -std=c11 -Wall -Wextra -Wpedantic records.c -o records
+./records
 ```
 
-1. Choose **1**. Enter ID `104`, first name `Sam`, last name `Demo`, programme `Computer Science`, and year `1`.
-2. Choose **6** to add `CSC102` (`Data Structures`) to student `104` with a maximum of `100` and a mark of `70`. Choose **3** to view the result. Use **7** to change the mark to `75`, then view the result again.
-3. Choose **8**, search by name for `Demo`, and choose **9** to sort by ID. Choose **5** to delete student `104` and confirm with `y`.
-4. Exit with **0** and run the last command again. Choose **10** to show the academic report for the three saved records.
+### Add and update records
 
-![VS Code terminal showing the academic report after reloading three students](demo/terminal.png)
+I register Aline Uwase, add a course, change the mark, and update the student details.
 
-### Terminal output
+![Registering and updating a student](demo/records.png)
 
-```text
-Loaded 3 students.
+### Search and sort
 
-Academic report
-Students: 3
-Course registrations: 2
-Passing: 1
-Failing: 1
-No courses: 1
-Overall average: 63.0%
-Highest: Amina Kato (ID 101), 84.0%
-Lowest: Isaac Musa (ID 102), 42.0%
+I try every search type and sort order. Students with no courses go last when I sort by average.
 
-Average by course code
-CSC101: 63.0% (2 records)
+![Searching and sorting students](demo/search-sort.png)
 
-Students per programme
-Information Technology: 2
-Computer Science: 1
-```
+### Validation
+
+The program rejects bad options, duplicates, bad marks, and a damaged file.
+
+![Rejected input and edge cases](demo/validation.png)
+
+### Saved records and academic report
+
+I delete student `104`, check the saved file, restart, and choose **10**.
+
+![Deleting a student, reloading, and showing the academic report](demo/terminal.png)
 
 ### Supporting files
 

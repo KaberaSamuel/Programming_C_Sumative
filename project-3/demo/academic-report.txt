@@ -5,8 +5,8 @@ Passing: 1
 Failing: 1
 No courses: 1
 Overall average: 63.0%
-Highest: Amina Kato (ID 101), 84.0%
-Lowest: Isaac Musa (ID 102), 42.0%
+Highest: Samuel Kabera (ID 101), 84.0%
+Lowest: Eric Mugisha (ID 102), 42.0%
 
 Average by course code
 CSC101: 63.0% (2 records)

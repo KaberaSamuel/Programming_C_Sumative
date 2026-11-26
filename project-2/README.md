@@ -4,39 +4,47 @@ I use this Bash menu to check system resources, look up processes, and save a he
 
 ## Demonstration
 
-I check CPU, memory, and disk usage, then find and stop a temporary process.
+I run the script in a separate process view with `unshare`. The process lists show only the processes from this demo. CPU, memory, and disk figures are for the whole computer.
 
-From this folder, start a temporary process and use a separate folder for the demo log and report.
+From this folder, run:
 
 ```bash
-demo_dir=$(mktemp -d)
-sleep 120 &
-demo_pid=$!
-echo "$demo_pid"
-echo "$demo_dir"
-SYSTEM_HEALTH_LOG="$demo_dir/activity.log" ./monitor.sh
+unshare --user --map-current-user --pid --fork --mount-proc bash
+sleep 900 &
+./monitor.sh
 ```
 
-1. Choose **2. Monitor CPU** and enter `100`. Choose **3. Monitor memory** and enter `0` to see a warning. Choose **4. Monitor disks** and enter `100`.
-2. Choose **5. View or search processes** and enter the printed PID. Choose **6. Terminate a process**, enter the same PID, and confirm with `y`.
-3. Choose **7. Generate a health report**. Enter the folder printed by `echo "$demo_dir"`. After exiting, open the generated report with `cat "$demo_dir"/health-*.txt`.
+Type `exit` after the demo to leave the separate process view.
 
-![VS Code terminal showing CPU, memory, disk usage, and the temporary process result](demo/terminal.png)
+### Resource monitoring
 
-### Terminal output
+I view the system information with **1**. I use thresholds of `0`, `0`, and `50` with options **2**, **3**, and **4** to show warnings.
 
-```text
-System health report (excerpt)
-CPU usage: 1%
-Memory (MiB): 15691 total, 4814 used, 10877 available
-Memory usage: 30.7%
-Filesystem      Size  Used Avail Use% Mounted on
-/dev/nvme0n1p4  196G  127G   60G  68% /
+![System information with CPU, memory, and disk warnings](demo/monitoring.png)
 
-Warning: memory usage is above 0%.
-  21087  0.0  0.0 sleep
-Sent SIGTERM to PID 21087.
-```
+### Process management
+
+I search for `sleep`, cancel one termination, confirm the next one, and check that the process has gone.
+
+![Searching for and terminating a temporary process](demo/processes.png)
+
+### Invalid input
+
+The script rejects a bad menu option, threshold, PID, and folder. It also protects PID 1, which is the demo shell in this view.
+
+![Rejected inputs and a protected process](demo/invalid-input.png)
+
+### Health report
+
+I choose **7**, enter `demo` as the folder, exit, and open the saved report. I then renamed it to `health-report.txt`.
+
+![Generating and reading a health report](demo/terminal.png)
+
+### Activity log
+
+I show the timestamped lines of the log. Clearing it needs confirmation.
+
+![Viewing and clearing the activity log](demo/activity-log.png)
 
 ### Supporting files
 

@@ -20,9 +20,9 @@ I wrote a Bash menu to check CPU, memory, and disk usage, search for running pro
 
 ![System health report and temporary process check](project-2/demo/terminal.png)
 
-The demo report showed 1% CPU usage, 30.7% memory usage, and 68% usage on the root filesystem. The script found a temporary sleep process and confirmed that it sent SIGTERM to it.
+The demo report showed 7% CPU usage, 51.5% memory usage, and 63% usage on the root filesystem. The script found a temporary sleep process and confirmed that it sent SIGTERM to it.
 
-[Demo steps and complete terminal excerpt](project-2/README.md#demonstration) · [Sample report](project-2/demo/health-report.txt)
+[Demo steps and screenshots](project-2/README.md#demonstration) · [Sample report](project-2/demo/health-report.txt)
 
 ## Project 3 Student Academic Records
 
@@ -34,7 +34,7 @@ I use this C program to register students, add courses, and update marks. It kee
 
 In the demo, I added a student, changed a course mark, searched and sorted the records, and deleted the temporary student. After restarting, the report showed one passing student, one failing student, and one student with no courses. The overall average was 63.0%.
 
-[Demo steps and complete terminal excerpt](project-3/README.md#demonstration) · [Sample report](project-3/demo/academic-report.txt)
+[Demo steps and screenshots](project-3/README.md#demonstration) · [Sample report](project-3/demo/academic-report.txt)
 
 ## Project 4 Sales Transaction Analysis
 
@@ -46,7 +46,7 @@ I wrote this C program to save sales, find transactions, and calculate revenue. 
 
 I filtered the sample sales for pens, sorted by total, then saved and reloaded the data. The report showed three transactions, total revenue of 75.00, an average of 25.00, and pen revenue of 60.00.
 
-[Demo steps and complete terminal excerpt](project-4/README.md#demonstration) · [Sample report](project-4/demo/sales-report.txt)
+[Demo steps and screenshots](project-4/README.md#demonstration) · [Sample report](project-4/demo/sales-report.txt)
 
 ## Project 5 Multithreaded Document Search
 
@@ -58,7 +58,7 @@ I wrote this C program to look for a keyword in several text files. Each file ge
 
 I searched for IoT in three sample files. The sensor file had two matches on one line, the network file had one lowercase match, and the C basics file had zero matches. The program wrote a separate report for each file.
 
-[Demo steps and complete terminal excerpt](project-5/README.md#demonstration) · [Sample report](project-5/demo/sensors_report.txt)
+[Demo steps and screenshots](project-5/README.md#demonstration) · [Sample report](project-5/demo/sensors_report.txt)
 
 ## Conclusion
 

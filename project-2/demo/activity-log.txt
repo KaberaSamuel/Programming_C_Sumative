@@ -1,4 +1,12 @@
-[2026-11-20 23:36:59] Memory monitoring (threshold 0%):
-Warning: memory usage is above 0%.
-[2026-11-20 23:36:59] Viewed or searched processes: 21087.
-[2026-11-20 23:36:59] Sent SIGTERM to PID 21087.
+[2026-11-26 15:57:55] Viewed system information.
+[2026-11-26 15:57:58] CPU monitoring (threshold 0%):
+[2026-11-26 15:58:04] Memory monitoring (threshold 0%):
+[2026-11-26 15:58:07] Disk monitoring (threshold 50%):
+[2026-11-26 15:58:14] Viewed or searched processes: sleep.
+[2026-11-26 15:58:17] Cancelled termination of PID 26.
+[2026-11-26 15:58:21] Sent SIGTERM to PID 26.
+[2026-11-26 15:58:23] Viewed or searched processes: 26.
+[2026-11-26 15:58:34] Rejected an invalid PID.
+[2026-11-26 15:58:37] Refused to terminate PID 1.
+[2026-11-26 15:58:39] Report directory was inaccessible.
+[2026-11-26 15:58:47] Generated report: demo/health-2026-11-26_15-58-45-9x1KTu.txt
