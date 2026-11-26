@@ -1,0 +1,10 @@
+# Compiled programs
+project-3/records
+project-4/sales
+
+# Saved data written when the demo runs
+project-3/students.txt
+project-4/transactions.txt
+
+# Reports written when the demo runs
+project-5/*_report*.txt
